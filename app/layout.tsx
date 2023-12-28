@@ -8,7 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreloadResources } from "./preload";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://leerob.io"),
+  metadataBase: new URL("https://ghostkode.com"),
   title: {
     default: "Jayakrishnan M",
     template: "%s | Jayakrishnan M",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Jayakrishnan M",
     description: "Developer, writer, and creator.",
-    url: "https://leerob.io",
+    url: "https://ghostkode.com",
     siteName: "Jayakrishnan M",
     locale: "en_IN",
     type: "website",
