@@ -6,7 +6,6 @@ import happy from "../public/images/me/happy.jpeg";
 import idcard from "../public/images/me/idcard.jpeg";
 import moody from "../public/images/me/moody.jpeg";
 import ring from "../public/images/me/ring.jpeg";
-import { Suspense } from "react";
 
 function ArrowIcon() {
   return (
@@ -44,12 +43,6 @@ const BlogLink = ({ slug, name }) => {
           <p className="font-medium text-neutral-900 dark:text-neutral-100">
             {name}
           </p>
-          <Suspense fallback={<p className="h-6" />}>
-            {/* TODO: ADD COUNT LATER */}
-            <p className="text-neutral-600 dark:text-neutral-400">
-              25988 views
-            </p>
-          </Suspense>
         </div>
         <div className="text-neutral-700 dark:text-neutral-300 transform transition-transform duration-300 group-hover:-rotate-12">
           <ArrowIcon />
@@ -158,8 +151,8 @@ export default function Page() {
 
       <div className="my-8 flex flex-col space-y-4 w-full">
         <BlogLink
-          name="How to build a simple web application with T3 stack?"
-          slug="developer-experience-examples"
+          name="Passkeys - What and Why?"
+          slug="passkeys-what-and-why"
         />
       </div>
 
