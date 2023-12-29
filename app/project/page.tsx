@@ -1,21 +1,24 @@
-import Image, { StaticImageData } from "next/image";
-import dark from "../../public/images/project/codify/dark.png";
-import light from "../../public/images/project/codify/light.png";
-import darkGradient from "../../public/images/project/codify/dark-gradient.png";
-import ogImage from "../../public/images/project/codify/og-image.jpg";
 import { ImageCard } from "app/components/img-card";
-import github from "public/github-logo.svg";
 import Link from "next/link";
 
 export default function Page() {
-  const imgs: { alt: string; img: StaticImageData }[] = [
-    { alt: "Dark mode screenshot of codify webapp", img: dark },
-    { alt: "Light mode screenshot of codify webapp", img: light },
+  const images: { alt: string; img: string }[] = [
+    {
+      alt: "Og image of codify webapp",
+      img: "/images/project/codify/og-image.jpg",
+    },
+    {
+      alt: "Dark mode screenshot of codify webapp",
+      img: "/images/project/codify/dark.png",
+    },
+    {
+      alt: "Light mode screenshot of codify webapp",
+      img: "/images/project/codify/light.png",
+    },
     {
       alt: "Dark mode with color gradient screenshot of codify webapp",
-      img: darkGradient,
+      img: "/images/project/codify/dark-gradient.png",
     },
-    { alt: "Og image of codify webapp", img: ogImage },
   ];
 
   return (
@@ -65,7 +68,7 @@ export default function Page() {
         </Link>
       </div>
 
-      <ImageCard imgs={imgs} />
+      <ImageCard images={images} />
     </section>
   );
 }
