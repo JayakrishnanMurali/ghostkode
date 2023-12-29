@@ -1,0 +1,66 @@
+---
+title: "Passkeys - What and Why?"
+publishedAt: "2023-12-30"
+summary: "Passkeys are the next evolution of login credentials. They are more secure, easier to use, and more private than passwords."
+---
+
+<Image
+  alt={`Github passkey login`}
+  src={`/images/blogs/passkeys/passkey-github.png`}
+  width={1190}
+  height={108}
+/>
+
+I tried to login to github last week from my laptop and was surprised by a new authentication prompt. I followed all the
+steps and was able to login without any passwords or 2FA's. I did some research and found out that github
+had implemented passkeys. I was intrigued and decided to learn more about them.
+
+### Lets talk about the `Why` first
+
+One of the major problems I faced with passwords is that they are harder to remember. I have to use a password manager to
+store all my passwords. I have to remember the master password for the password manager. I have to use 2FA's for
+authentication. If we are not using a password manager, we probably use one easy to remember password for all our accounts.
+
+> We can see the problem here. Passwords are harder to remember and easy to crack. They can also be a pain to
+> remember hundreds of them without a password manager.
+
+### What are passkeys?
+
+Enters passkeys. Passkeys let us login to our accounts without using passwords and verify anyone's identity by using
+biometric information, providing a more secure and easier ways to access apps and websites. If we are
+using a website that supports passkeys, we don't have to worry about any 2FA's or OTP. This also reduces the risk of
+account breaching.
+
+Passkeys are [FIDO2-complaint](https://fidoalliance.org/fido2/) technology that offers a safer login alternative in a world of advanced
+cyber threats.
+
+### How do passkeys work?
+
+Passkeys make use of an API called [WebAuthn](https://webauthn.io/) or Web Authentication. The API was developed by
+[FIDO Alliance](https://fidoalliance.org/), an open industry association with a focused mission: authentication
+standards to help reduce the world's over-reliance on passwords and [WorldWideWeb Consortium (W3C)](https://www.w3.org/),
+a community that works together to develop Web standards.
+
+The main component behind passkey is a cryptographic key pair. The key pair consists of a public key and a private key.
+The private key is stored on our device and the public key is stored on the server. When create one account the
+corresponding public key is uploaded to a server. When we try to login to the account, the server sends a unique
+challenge to our device. The device then signs the challenge with the private key and sends it back to the server. Our
+device only does so if we approve this, either by using a biometric or a PIN. The server then verifies the signature with
+our public key.
+
+> The private key is never shared with the server. The server only stores the public key.
+> Each passkey can only be used for a single account, there is no risk of reusing them across services.
+
+The private key behind the passkey lives on our devices and in some cases, it stays only on the device it was created on.
+In other cases, our operating system or an app similar to a password manager may sync it to other devices we own.
+
+We can use passkey from our phone to sign in to other device by scanning a QR displayed on that device. After proper
+verification the phone then sends a one time passkey signature, which requires biometric authentication on phone.
+Neither the passkey itself nor the screen lock information is sent to the new device.
+
+### Future looks bright and secure
+
+Passkeys are a promising step forward for password-less authentication. They make it simple to use our
+existing devices to sign in, rather than a security key. The future for passkey protocols looks great
+as we will see more and more applications getting first class support. We're still in the early days of all this,
+but expect to see it mentioned more and more.
