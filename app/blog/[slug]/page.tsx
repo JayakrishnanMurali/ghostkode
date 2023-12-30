@@ -88,6 +88,34 @@ export default function Blog({ params }) {
       <article className="prose prose-quoteless prose-neutral dark:prose-invert">
         <CustomMDX source={post.content} />
       </article>
+
+      <footer className="mt-16">
+        <hr className="my-6 border-neutral-100 dark:border-neutral-800" />
+
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <a
+              href="https://twitter.com/ghostkoder"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2"
+            >
+              <svg
+                width="16"
+                height="16"
+                role="img"
+                aria-label="Vercel logo"
+                className="inline-flex mr-1"
+              >
+                <use href="/sprite.svg#twitter" />
+              </svg>
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                @ghostkoder
+              </span>
+            </a>
+          </div>
+        </div>
+      </footer>
     </section>
   );
 }
