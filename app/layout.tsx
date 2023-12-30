@@ -18,6 +18,14 @@ export const metadata: Metadata = {
     title: "Jayakrishnan M",
     description: "Developer, writer, and creator.",
     url: "https://ghostkode.com",
+    images: [
+      {
+        url: "https://ghostkode.com/og-static.png",
+        width: 1920,
+        height: 1080,
+        alt: "Jayakrishnan M",
+      },
+    ],
     siteName: "Jayakrishnan M",
     locale: "en_IN",
     type: "website",
