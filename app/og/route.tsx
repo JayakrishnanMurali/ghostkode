@@ -4,11 +4,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export async function GET() {
-  const image = await fetch(new URL("./image.png", import.meta.url)).then(
-    (res) => res.arrayBuffer()
-  );
-
+export function GET() {
   return new ImageResponse(
     (
       <div
@@ -22,11 +18,7 @@ export async function GET() {
           alignItems: "center",
         }}
       >
-        <img
-          width="256"
-          height="256"
-          src={URL.createObjectURL(new Blob([image]))}
-        />
+        <img width="256" height="256" src='"/public/og-bg.png"' />
       </div>
     ),
     {
