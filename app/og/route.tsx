@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const postTitle = searchParams.get("title");
+  // const { searchParams } = req.nextUrl;
+  // const postTitle = searchParams.get("title");
 
   return new ImageResponse(
     (
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
           flexDirection: "column",
           alignItems: "flex-start",
           justifyContent: "center",
-          backgroundImage: "url(https://ghostkode.com/og-bg.png)",
+          background: "#000000",
+          // backgroundImage: "url(https://ghostkode.com/og-bg.png)",
         }}
       >
         <div
@@ -33,7 +34,8 @@ export async function GET(req: NextRequest) {
             whiteSpace: "pre-wrap",
           }}
         >
-          {postTitle}
+          {/* {postTitle} */}
+          Welcome to GhostKode
         </div>
       </div>
     ),
