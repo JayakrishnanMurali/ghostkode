@@ -1,47 +1,37 @@
 import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
+// App router includes @vercel/og.
+// No need to install it.
 
 export const runtime = "edge";
 
-export async function GET(req: NextRequest) {
-  // const { searchParams } = req.nextUrl;
-  // const postTitle = searchParams.get("title");
+export async function GET() {
+  const image = await fetch(new URL("./image.png", import.meta.url)).then(
+    (res) => res.arrayBuffer()
+  );
 
   return new ImageResponse(
     (
       <div
         style={{
-          height: "100%",
-          width: "100%",
           display: "flex",
+          background: "#f6f6f6",
+          width: "100%",
+          height: "100%",
           flexDirection: "column",
-          alignItems: "flex-start",
           justifyContent: "center",
-          background: "#000000",
-          // backgroundImage: "url(https://ghostkode.com/og-bg.png)",
+          alignItems: "center",
         }}
       >
-        <div
-          style={{
-            marginLeft: 190,
-            marginRight: 190,
-            display: "flex",
-            fontSize: 130,
-            letterSpacing: "-0.05em",
-            fontStyle: "normal",
-            color: "white",
-            lineHeight: "120px",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {/* {postTitle} */}
-          Welcome to GhostKode
-        </div>
+        <img
+          width="256"
+          height="256"
+          src={URL.createObjectURL(new Blob([image]))}
+        />
       </div>
     ),
     {
-      width: 1920,
-      height: 1080,
+      width: 1200,
+      height: 630,
     }
   );
 }
