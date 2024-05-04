@@ -150,9 +150,18 @@ export default function Page() {
       </div>
 
       <div className="my-8 flex flex-col space-y-4 w-full">
+        <p>
+          Here are a few of my recent blog posts that you might find
+          interesting:
+        </p>
         <BlogLink
           name="Passkeys - What and Why?"
           slug="passkeys-what-and-why"
+        />
+
+        <BlogLink
+          name="Understanding useMemo and useCallback"
+          slug="understanding-usememo-usecallback"
         />
       </div>
 

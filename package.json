@@ -15,6 +15,7 @@
     "@vercel/analytics": "^1.1.1",
     "@vercel/speed-insights": "^0.0.5",
     "autoprefixer": "^10.4.16",
+    "date-fns": "^3.6.0",
     "dotenv": "^16.3.1",
     "geist": "1.1.0",
     "next": "14.0.5-canary.23",

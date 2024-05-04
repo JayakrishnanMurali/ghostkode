@@ -33,8 +33,20 @@ export default function WorkPage() {
             CareStack
           </a>{" "}
           to build products that help dental practices run their business.
-          Currently I work on the tools team, building a suite of products that
-          help practices manage their patients, appointments, and more.
+          Currently I work on the telecom team, building a suite of products
+          that help practices manage their patients, appointments, and more. I
+          work with a team of talented engineers to build scalable and reliable
+          products that help dental practices grow. The technology stack I work
+          with includes React, Electron, React Native, and more.
+        </p>
+
+        <p>
+          I also contribute to the design system, ensuring that the products we
+          build are accessible and consistent. I work closely with designers to
+          implement designs that are user-friendly and accessible. I also
+          contribute to the documentation and education of the team, ensuring
+          that everyone is up to date with the latest technologies and best
+          practices.
         </p>
 
         <hr className="my-6 border-neutral-100 dark:border-neutral-800" />
