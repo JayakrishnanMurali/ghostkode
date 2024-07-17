@@ -10,6 +10,29 @@ type ProjectsType = {
 
 export const projects: ProjectsType[] = [
   {
+    name: "Knotit",
+    link: "https://notes.ghostkode.com/",
+    github: "https://github.com/JayakrishnanMurali/note-it",
+    images: [
+      {
+        alt: "Landing page",
+        img: "/images/project/knotit/landing.png",
+      },
+      {
+        alt: "Dashboard page",
+        img: "/images/project/knotit/dashboard.png",
+      },
+      {
+        alt: "Editor view dark mode",
+        img: "/images/project/knotit/editor.png",
+      },
+      {
+        alt: "Search project",
+        img: "/images/project/knotit/new.png",
+      },
+    ],
+  },
+  {
     name: "Codify",
     link: "https://codify.ghostkode.com/",
     github: "https://github.com/JayakrishnanMurali/codify",
