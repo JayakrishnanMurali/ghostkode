@@ -154,6 +154,12 @@ export default function Page() {
           Here are a few of my recent blog posts that you might find
           interesting:
         </p>
+
+        <BlogLink
+          name="React Re-Renders: Why They Happen and How to Optimize Them"
+          slug="react-rerender-why"
+        />
+
         <BlogLink
           name="Passkeys - What and Why?"
           slug="passkeys-what-and-why"

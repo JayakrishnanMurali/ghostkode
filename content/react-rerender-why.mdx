@@ -1,0 +1,95 @@
+---
+title: "React Re-Renders: Why They Happen and How to Optimize Them"
+publishedAt: "2024-09-01"
+summary: "Understanding React re-renders is key to building efficient applications. Learn why React re-renders and how you can optimize performance by avoiding unnecessary re-renders."
+---
+
+<Image
+  alt={`React re-render cycle`}
+  src={`/images/blogs/react-render.jpg`}
+  width={1190}
+  height={40}
+/>
+
+I recently noticed performance issues in a React application I was working on. After profiling my app, I discovered that several components were re-rendering unnecessarily. Curious to understand this behavior better, I decided to explore the concept of React re-renders.
+
+### Why Re-Renders Matter
+
+One of the biggest challenges with React development is managing re-renders. React re-renders components in response to changes in state, props, or context. While this is necessary for ensuring UI updates, it can also lead to performance issues when not properly managed.
+
+> Unnecessary React re-renders can cause performance bottlenecks, especially in applications with complex component hierarchies.
+
+### What Triggers Re-Renders?
+
+React re-renders occur when the internal state of a component changes, when props passed to a component change, or when context values are updated. React will re-render the component to reflect these changes in the UI.
+
+Here are some common scenarios that trigger re-renders:
+
+1. **State Updates**: Whenever the state of a component changes, React will re-render that component to reflect the updated state.
+2. **Prop Changes**: If the props passed to a component change, React will re-render the component to reflect the new data.
+3. **Context Updates**: If a component subscribes to a context and the context value changes, React will re-render that component.
+
+While re-renders are a fundamental part of React, unnecessary re-renders can slow down your app.
+
+```jsx
+function ExpensiveComponent(props) {
+  // Simulate expensive computation
+  for (let i = 0; i < 100000; i++) {}
+  return <div>Count: {props.count}</div>;
+}
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <ExpensiveComponent count={count} />
+    </div>
+  );
+}
+```
+
+In this example, `ExpensiveComponent` re-renders every time the `count` state changes, even though the logic only requires the count value. This is because the component receives new props on every render.
+
+### How to minimize unnecessary re-renders?
+
+Now that we understand what triggers React re-renders, let's talk about how to optimize them.
+
+- **React.memo**: `React.memo` is a higher-order component that memoizes the result of a component's render, preventing it from re-rendering if its props haven’t changed.
+
+```jsx
+const MemoizedExpensiveComponent = React.memo(ExpensiveComponent);
+```
+
+- **UseCallback and UseMemo**: These hooks allow you to memoize functions and values, ensuring they aren’t re-created on every render.
+
+```jsx
+function MemoizedDouble(num) {
+  // Memoize the function and return the memoized version
+  const double = useCallback(() => num * 2, [num]);
+
+  // Memoize the value and return the memoized version
+  const expensiveDouble = useMemo(() => num * 2, [num]);
+
+  return (
+    <div>
+      <div>Double: {double()}</div>
+      <div>Expensive Double: {expensiveDouble}</div>
+    </div>
+  );
+}
+```
+
+- **Avoid Inline Functions**: Passing inline functions to child components can trigger re-renders. Instead, define functions outside of the render method and memoize them with `useCallback`.
+- **Optimize Context Usage**: Be cautious with React Context as it can lead to unnecessary re-renders. Only subscribe to the context values your component needs.
+
+### Conclusion
+
+React re-renders are essential for updating the UI, but unnecessary re-renders can hurt performance. By understanding the causes of re-renders and using optimization techniques like `React.memo` and `useCallback`, you can build more efficient and performant applications. Keep an eye on your component's re-render patterns to ensure your React app runs smoothly.
+
+### Further Resources
+
+- [React.memo Documentation](https://react.dev/reference/react/memo)
+- [React.useCallback Documentation](https://react.dev/reference/react/useCallback)
+- [React.useMemo Documentation](https://react.dev/reference/react/useMemo)

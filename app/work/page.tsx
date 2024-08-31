@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Work",
@@ -125,34 +124,6 @@ export default function WorkPage() {
           NextJS, Zustand, Typescript, Material UI, Google Tag Manager, Python,
           and Django, showcasing my proficiency in a diverse set of tools and
           frameworks.
-        </p>
-        <hr className="my-6 border-neutral-100 dark:border-neutral-800" />
-
-        {/* Infosys */}
-        <h2 className="font-medium text-xl mb-1 tracking-tighter">Infosys</h2>
-        <p className="text-neutral-600 dark:text-neutral-400 text-sm">
-          Frontend Engineer, 2020 Aug — 2022 Jan
-        </p>
-        <p>
-          I revamped older React projects by transitioning from class-based
-          approaches to the more modern and efficient function and hook-based
-          methods. This switch not only enhanced the development experience but
-          also contributed to better code maintainability. My collaboration
-          extended to cross-functional teams, where I worked closely with
-          external designers and stakeholders to seamlessly integrate and
-          deliver projects on time.
-        </p>
-
-        <p>
-          In addition to the structural improvements, I focused on optimizing
-          web page rendering techniques to boost website performance at{" "}
-          <a target="_blank" rel="noopener noreferrer" href="">
-            Infosys
-          </a>
-          . These optimizations resulted in faster-loading pages, ultimately
-          leading to increased user satisfaction. The technology stack employed
-          for these enhancements encompassed ReactJS, NextJS, Tailwind,
-          CSS/LESS, Webpack, Recharts, Redux, and Thunk.
         </p>
       </div>
     </section>
