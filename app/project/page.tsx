@@ -1,56 +1,40 @@
-import { ImageCard } from "app/components/img-card";
-import { ProjectCard } from "app/components/project-card";
-import Link from "next/link";
+import type { Metadata } from "next";
 import { projects } from "./_project.constants";
 
-export default function Page() {
-  const images: { alt: string; img: string }[] = [
-    {
-      alt: "Og image of codify webapp",
-      img: "/images/project/codify/og-image.jpg",
-    },
-    {
-      alt: "Dark mode screenshot of codify webapp",
-      img: "/images/project/codify/dark.png",
-    },
-    {
-      alt: "Light mode screenshot of codify webapp",
-      img: "/images/project/codify/light.png",
-    },
-    {
-      alt: "Dark mode with color gradient screenshot of codify webapp",
-      img: "/images/project/codify/dark-gradient.png",
-    },
-  ];
+export const metadata: Metadata = {
+  title: "Projects",
+  description: "A few things I've built outside of work.",
+};
 
+export default function ProjectPage() {
   return (
     <section>
-      <h1 className="font-medium text-2xl mb-8 tracking-tighter">
-        checkout my project
-      </h1>
-      <p className="prose prose-neutral dark:prose-invert">
-        Here are some of the projects I've worked on. You can find more on my{" "}
-        <a
-          rel="noopener noreferrer"
-          target="_blank"
-          href="https://github.com/JayakrishnanMurali"
-        >
-          GitHub
-        </a>
-        .
-      </p>
-
-      <hr className="my-6 border-neutral-100 dark:border-neutral-800" />
-
-      <div className="flex flex-col gap-4">
+      <h1 className="font-medium text-2xl mb-8 tracking-tighter">things I've built</h1>
+      <div className="flex flex-col divide-y divide-neutral-100 dark:divide-neutral-800">
         {projects.map((project) => (
-          <ProjectCard
-            key={project.name}
-            images={project.images}
-            github={project.github}
-            name={project.name}
-            link={project.link}
-          />
+          <div key={project.name} className="py-5 first:pt-0 last:pb-0">
+            <div className="flex items-baseline justify-between mb-1">
+              <a
+                href={project.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-neutral-900 dark:text-neutral-100"
+              >
+                {project.name}
+              </a>
+              <a
+                href={project.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+              >
+                github ↗
+              </a>
+            </div>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {project.description}
+            </p>
+          </div>
         ))}
       </div>
     </section>

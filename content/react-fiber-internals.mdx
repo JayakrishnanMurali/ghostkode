@@ -1,0 +1,100 @@
+---
+title: "How React's reconciler actually works"
+publishedAt: "2026-02-28"
+summary: "A deep dive into React's Fiber architecture — how it replaced the stack reconciler, what a fiber node actually is, and how the work loop drives rendering under the hood."
+---
+
+React Fiber shipped with React 16 back in 2017. Most developers know it as the thing that enabled concurrent features — but very few know what it actually *is* under the hood. After spending a few weeks reading through the React source, here's what I found.
+
+## The problem with the old stack reconciler
+
+Before Fiber, React used a recursive tree traversal to diff and apply updates. This worked, but it had a critical flaw: **the call stack was the scheduler**. Once React started reconciling a tree, it couldn't stop. It would block the main thread until the entire tree was processed.
+
+For small apps this is fine. For large component trees — or animations and user input that need to be responsive — this is a serious problem. A 300ms reconciliation pass will drop frames and feel janky, and there's nothing you can do about it.
+
+Fiber was built to solve this at the architecture level.
+
+## What is a fiber?
+
+A fiber is a JavaScript object that represents a unit of work. Every React element in your tree has a corresponding fiber node. Here's a simplified version of what that object looks like:
+
+```js
+{
+  tag: WorkTag,           // type of fiber (FunctionComponent, ClassComponent, HostComponent, etc.)
+  key: null | string,
+  type: any,              // the actual component function/class or DOM element string
+  stateNode: any,         // the real DOM node or class instance
+
+  return: Fiber | null,   // parent fiber
+  child: Fiber | null,    // first child
+  sibling: Fiber | null,  // next sibling
+
+  pendingProps: any,
+  memoizedProps: any,
+  memoizedState: any,
+
+  effectTag: SideEffectTag,
+  nextEffect: Fiber | null,
+
+  lanes: Lanes,
+  childLanes: Lanes,
+
+  alternate: Fiber | null, // the previous version of this fiber
+}
+```
+
+The linked-list structure (`return`, `child`, `sibling`) is deliberate. It lets React traverse the tree **iteratively** instead of recursively, which means it can pause mid-traversal, yield to the browser, and resume later. That's the entire trick.
+
+## The double-buffer: current and work-in-progress
+
+React maintains two fiber trees at any point in time:
+
+- **current** — the tree currently rendered on screen
+- **work-in-progress** — the tree being built for the next render
+
+Every fiber node has an `alternate` pointer that links it to its counterpart in the other tree. When a render completes, the work-in-progress tree becomes the new current tree. React doesn't throw away the old tree — it reuses those fiber objects for the next render cycle. This keeps GC pressure low.
+
+## The work loop
+
+The reconciler runs in two phases: **render** (a.k.a. reconciliation) and **commit**.
+
+The render phase is interruptible. React processes fibers one at a time in a loop, calling `performUnitOfWork` on each:
+
+```js
+function workLoopConcurrent() {
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress);
+  }
+}
+```
+
+`shouldYield()` checks whether the browser needs the main thread back — it's powered by the Scheduler package, which uses `MessageChannel` to queue tasks and `performance.now()` to track deadlines. If the frame deadline is approaching, the loop breaks. The work is checkpointed on the current fiber, and a new task is posted to resume it after the browser has had a chance to paint.
+
+The commit phase is **not interruptible**. Once React has a completed work-in-progress tree with all its side effects computed, it applies DOM mutations synchronously. This is why you should never put expensive logic in `useLayoutEffect` — it runs synchronously in the commit phase.
+
+## Lanes: the priority system
+
+React 18 introduced the Lanes model to replace the older expiration-time priority system. Lanes are a bitmask — each bit represents a priority tier:
+
+```js
+const SyncLane         = 0b0000000000000000000000000000001;
+const InputContinuousLane = 0b0000000000000000000000000000100;
+const DefaultLane      = 0b0000000000000000000000000010000;
+const TransitionLane1  = 0b0000000000000000000000001000000;
+const IdleLane         = 0b0100000000000000000000000000000;
+```
+
+When you call `setState`, React assigns a lane to the update based on how it was triggered. A click handler gets `SyncLane`. A `startTransition` update gets a `TransitionLane`. React then processes higher-priority lanes first — it can even interrupt a low-priority render that's in progress to handle an urgent update, then replay the interrupted work afterward.
+
+This is what makes features like `useTransition` and `useDeferredValue` possible without any scheduler magic in userland — the priority logic is baked into how updates are enqueued and processed at the fiber level.
+
+## Why this matters in practice
+
+Understanding Fiber explains a lot of React's behavior that otherwise seems arbitrary:
+
+- Why `useLayoutEffect` runs synchronously but `useEffect` is deferred
+- Why `startTransition` can keep the UI responsive during expensive renders
+- Why React can "hydrate" server-rendered HTML incrementally in React 18
+- Why `key` changes cause a full subtree remount rather than a diff
+
+The reconciler is one of the most carefully engineered pieces of JavaScript in production. The source is worth reading — start with `ReactFiberWorkLoop.js` and `ReactFiber.js` in the React repo.

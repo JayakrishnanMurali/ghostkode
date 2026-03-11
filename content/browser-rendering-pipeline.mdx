@@ -1,0 +1,120 @@
+---
+title: "The browser rendering pipeline, from bytes to pixels"
+publishedAt: "2026-03-09"
+summary: "A complete walkthrough of how a browser turns raw HTML and CSS into pixels — covering parsing, style resolution, layout, paint, compositing, and where your JavaScript fits in between."
+---
+
+Every time a user loads a page or a React state update triggers a re-render, the browser executes a complex pipeline to put pixels on screen. Most frontend engineers have a vague sense of this pipeline but don't know where the bottlenecks actually live. This matters — a lot — because the optimizations that actually move the needle are different depending on *where* in the pipeline you're losing time.
+
+## The pipeline, end to end
+
+At a high level, the browser does this for every frame:
+
+```
+JavaScript → Style → Layout → Paint → Composite
+```
+
+These stages are not always all executed. Knowing which ones trigger which stages is what separates "it passed Lighthouse" from actually fast UI.
+
+## 1. Parsing: HTML → DOM, CSS → CSSOM
+
+The browser receives raw bytes over the network and decodes them into characters, then tokenizes them into nodes, then builds the **DOM** (Document Object Model). This is a tree of all the HTML elements.
+
+In parallel, CSS is parsed into the **CSSOM** (CSS Object Model) — a separate tree of style rules.
+
+Key facts:
+- HTML parsing is incremental. The browser can start rendering before the full HTML is received.
+- CSS is **render-blocking**. The browser won't render anything until all CSS in `<head>` is parsed into the CSSOM. This is why inlining critical CSS matters.
+- JavaScript is **parser-blocking** by default. A `<script>` tag halts HTML parsing until the script is fetched and executed. `async` and `defer` exist for this reason.
+
+## 2. Style resolution: DOM + CSSOM → Render Tree
+
+The browser combines the DOM and CSSOM to produce the **render tree** — a tree of only the visible nodes, with their computed styles attached.
+
+`display: none` elements are excluded from the render tree entirely. `visibility: hidden` elements are included — they take up space but are transparent.
+
+Style resolution is where cascade, specificity, and inheritance are applied. A high selector count or deeply nested rules slow this step down, though this is rarely the bottleneck in practice.
+
+## 3. Layout (Reflow)
+
+Layout is where the browser calculates the geometry of every element — its size and position on the page, in device pixels.
+
+This is expensive. Layout is **global** by default: changing the size of one element can force the browser to recalculate the position of many others. This is called a **reflow**.
+
+The properties that trigger layout are those that affect geometry:
+- `width`, `height`, `margin`, `padding`, `border`
+- `top`, `left`, `right`, `bottom` (for positioned elements)
+- `font-size`, `line-height`
+- `display`, `position`, `float`
+
+Forcing layout from JavaScript — by reading geometry properties after a DOM mutation — causes **layout thrashing**:
+
+```js
+// Reads geometry, forces a layout flush
+const width = element.offsetWidth;
+
+// Then mutates
+element.style.width = width + 10 + 'px';
+
+// Reading again forces ANOTHER layout flush
+const newWidth = element.offsetWidth;
+```
+
+The fix is to batch reads and writes, or use `requestAnimationFrame` to schedule mutations at the right time. Libraries like `fastdom` formalize this pattern.
+
+## 4. Paint
+
+Paint is where the browser fills in the pixels — drawing text, colors, borders, shadows, and images. It happens in layers.
+
+The browser doesn't always paint the entire page. It maintains a set of **paint layers** and only repaints the layers that have changed. Elements get promoted to their own layer when:
+- They have `will-change: transform` or `will-change: opacity`
+- They use `transform` or `opacity` animations
+- They use `position: fixed` or `position: sticky`
+- They're a `<video>` or `<canvas>`
+
+Properties that trigger paint (but not layout):
+- `color`, `background-color`, `box-shadow`
+- `border-radius`, `outline`
+- `background-image`
+
+If you're animating a box-shadow, you're triggering paint on every frame. This is expensive. The common trick is to animate the `opacity` of a pseudo-element instead — opacity changes bypass paint entirely and go straight to compositing.
+
+## 5. Compositing
+
+Compositing is the final step: the browser takes all the painted layers and assembles them into the final image, then uploads it to the GPU for display.
+
+This is the **cheapest** pipeline stage. The GPU is extremely fast at blending layers, applying transforms, and handling opacity. If you can do your animation entirely in the composite step, you avoid layout and paint entirely.
+
+The two CSS properties that are GPU-composited and don't trigger layout or paint:
+- `transform`
+- `opacity`
+
+This is why "use transform instead of top/left for animations" is standard advice. Moving an element with `left: 100px` triggers layout. Moving it with `transform: translateX(100px)` only triggers compositing — the GPU handles it without touching the main thread.
+
+## The rendering thread and the main thread
+
+One subtlety that matters in 2025: compositing now runs on a **separate compositor thread** in Chrome, independent of the main JavaScript thread. This means compositor-driven animations (via CSS `transition`/`animation` or the Web Animations API targeting only `transform`/`opacity`) continue smoothly even if the main thread is blocked.
+
+If your JavaScript is doing expensive work that blocks the main thread, CSS animations that only use `transform` and `opacity` will still run at 60fps. JS-driven animations using `requestAnimationFrame` will stutter, because they depend on the main thread being free.
+
+## Forcing a specific path through the pipeline
+
+To build intentionally fast UIs:
+
+| Goal | What to do |
+|---|---|
+| Avoid layout | Don't read geometry after writing DOM. Use `transform` for position. |
+| Avoid paint | Animate only `transform` and `opacity`. |
+| Promote a layer | Use `will-change: transform` on elements you know will animate. |
+| Measure layout cost | Use the Performance panel → look for "Layout" in the flame chart. |
+| Identify paint regions | Enable "Paint flashing" in Chrome DevTools Rendering tab. |
+
+`will-change` is often overused. It tells the browser to allocate a GPU layer ahead of time, which costs memory. Only apply it to elements that are actually about to animate, and remove it after the animation completes if you're adding it dynamically.
+
+## Where React fits in
+
+When React commits a render — the commit phase of the Fiber work loop — it makes synchronous DOM mutations. Those mutations trigger the browser's style, layout, paint, and composite stages for that frame.
+
+React batches DOM mutations to minimize reflows. The new `useTransition` API lets you mark expensive state updates as non-urgent, keeping the browser free to process input events and paint frames in between. But React can't remove layout or paint entirely — it can only minimize how often they happen, and how much of the tree is dirtied per update.
+
+Understanding the rendering pipeline makes it clear why that matters.

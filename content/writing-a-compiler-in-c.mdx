@@ -1,0 +1,145 @@
+---
+title: "I wrote a compiler in C. here's what it taught me"
+publishedAt: "2025-03-20"
+summary: "I spent a few weekends writing a small compiler in C — from lexer to bytecode emitter. No frameworks, no LLVM, just C and a lot of humbling moments."
+---
+
+I've always been vaguely intimidated by compilers. I understood them in the abstract — tokenize, parse, generate code — but had never actually built one. A few weekends ago, I finally did. I wrote a small compiler in C that takes a toy language (arithmetic expressions, variables, if/else, while loops) and emits bytecode for a tiny stack-based virtual machine.
+
+This is what I learned.
+
+## Why C
+
+Mostly because I wanted the discomfort. Writing a compiler in JavaScript is fine, but the language abstracts away too many of the things I wanted to feel — memory layout, manual string handling, explicit allocation. C makes you confront all of it. You can't ignore memory when you have to `malloc` every AST node yourself.
+
+## Phase 1: The Lexer
+
+The lexer (or scanner) reads raw source text and emits a flat list of tokens. A token is a tagged union — a type tag plus a value:
+
+```c
+typedef enum {
+  TOKEN_NUMBER,
+  TOKEN_IDENT,
+  TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH,
+  TOKEN_EQ, TOKEN_EQEQ,
+  TOKEN_IF, TOKEN_ELSE, TOKEN_WHILE,
+  TOKEN_LBRACE, TOKEN_RBRACE,
+  TOKEN_LPAREN, TOKEN_RPAREN,
+  TOKEN_SEMICOLON,
+  TOKEN_EOF,
+} TokenType;
+
+typedef struct {
+  TokenType type;
+  const char *start;
+  int length;
+  int line;
+} Token;
+```
+
+The lexer is a state machine: read a character, decide what kind of token you're starting, consume characters until the token ends. The tricky cases are multi-character tokens (`==` vs `=`), skipping whitespace and comments, and handling string boundaries without copying — I stored a pointer into the source buffer and a length instead.
+
+This worked well until I hit keywords. My first approach was scanning an identifier and then checking if it was in a list of keywords. That meant a strcmp for every identifier. Fine for a toy, but in a real lexer you'd use a hash table or a trie.
+
+## Phase 2: The Parser
+
+The parser takes the token stream and builds an **Abstract Syntax Tree** (AST). I used recursive descent — each grammar rule maps to a function that consumes tokens and returns a node.
+
+```c
+typedef enum {
+  NODE_NUMBER,
+  NODE_IDENT,
+  NODE_BINOP,
+  NODE_ASSIGN,
+  NODE_IF,
+  NODE_WHILE,
+  NODE_BLOCK,
+} NodeType;
+
+typedef struct Node {
+  NodeType type;
+  union {
+    double number;
+    struct { char name[64]; } ident;
+    struct { char op; struct Node *left; struct Node *right; } binop;
+    struct { struct Node *cond; struct Node *then; struct Node *else_; } if_stmt;
+    struct { struct Node *cond; struct Node *body; } while_stmt;
+    struct { struct Node **stmts; int count; } block;
+  };
+} Node;
+```
+
+Operator precedence is handled naturally by the call hierarchy. `parse_expr` calls `parse_term`, which calls `parse_factor`, which handles literals and parentheses. Higher precedence binds tighter because it's lower in the call stack.
+
+The hardest part was memory management. Every node is heap-allocated, and a complex expression creates hundreds of them. I didn't bother with a proper allocator — I just kept a flat arena (a big buffer with a bump pointer) and freed the whole thing at the end. This is actually what many production compilers do for the AST: arena allocation because you free the whole tree at once anyway.
+
+## Phase 3: The Code Generator
+
+I skipped a separate IR (intermediate representation) step and went straight from AST to bytecode. The VM is a simple stack machine with about 20 opcodes:
+
+```c
+typedef enum {
+  OP_PUSH,     // push constant onto stack
+  OP_LOAD,     // load variable value onto stack
+  OP_STORE,    // pop stack into variable slot
+  OP_ADD, OP_SUB, OP_MUL, OP_DIV,
+  OP_EQ, OP_LT, OP_GT,
+  OP_JMP,      // unconditional jump
+  OP_JMP_IF_FALSE, // conditional jump
+  OP_HALT,
+} Opcode;
+```
+
+Code generation is a recursive walk of the AST. A binary expression emits code for the left operand, then the right, then the operator instruction — both operands are on the stack when the operator runs, and the result is left on top.
+
+The interesting case is control flow. For an `if` statement:
+
+1. Emit code for the condition
+2. Emit a `JMP_IF_FALSE` with a placeholder target address
+3. Emit code for the then-branch
+4. Emit a `JMP` with a placeholder for skipping the else-branch
+5. **Patch** the placeholder from step 2 to point here
+6. Emit code for the else-branch
+7. Patch the placeholder from step 4 to point here
+
+Backpatching — emitting a jump with a dummy address and filling it in once you know the real target — is the standard technique. I stored patch locations in a small list and filled them in after emitting the relevant block.
+
+## The VM
+
+The VM is about 100 lines. It's a loop over opcodes with a stack pointer and an instruction pointer. Variables are stored in a flat array indexed by slot number (assigned by the compiler during code generation).
+
+```c
+void vm_run(Bytecode *bc) {
+  double stack[256];
+  int sp = 0;
+  int ip = 0;
+
+  while (1) {
+    switch (bc->ops[ip++]) {
+      case OP_PUSH: stack[sp++] = bc->constants[bc->ops[ip++]]; break;
+      case OP_ADD:  stack[sp-2] = stack[sp-2] + stack[sp-1]; sp--; break;
+      case OP_JMP:  ip = bc->ops[ip]; break;
+      case OP_JMP_IF_FALSE:
+        if (!stack[--sp]) ip = bc->ops[ip];
+        else ip++;
+        break;
+      case OP_HALT: return;
+      // ...
+    }
+  }
+}
+```
+
+Seeing it actually execute code I'd written from scratch was one of the more satisfying moments I've had programming.
+
+## What this changed about how I work
+
+**String handling in C is humbling.** I can write `"hello" + " world"` in JavaScript without thinking. In C, I spent an embarrassing amount of time on null terminators and off-by-one errors in `memcpy`. It gave me real appreciation for what high-level languages quietly do.
+
+**Grammars are just recursive data structures.** Once I understood that a parser is just a set of mutually recursive functions, the intimidation went away. Every grammar rule is a function. Every production is a call.
+
+**Memory layout matters for performance.** Pointer chasing through a heap-allocated AST is slow. Real compilers flatten their IR into arrays for cache locality. This is something I think about more now when designing data structures in JavaScript — not because JS has manual memory management, but because the CPU cache doesn't care what language you're using.
+
+**The tools we use hide enormous complexity.** Babel, esbuild, TypeScript's compiler, the V8 JIT — these are all doing what I did, but orders of magnitude more sophisticated. Having touched even a shallow version of this work makes me read their architecture docs very differently.
+
+The full source is on GitHub if you want to dig in. It's rough in places, but it works.

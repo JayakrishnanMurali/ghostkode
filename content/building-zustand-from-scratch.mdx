@@ -1,0 +1,150 @@
+---
+title: "What I learned building Zustand from scratch"
+publishedAt: "2025-10-18"
+summary: "I tried to rebuild Zustand's core from first principles to understand how it actually works. The implementation is tiny. The ideas behind it are not."
+---
+
+Zustand is one of those libraries that feels almost too simple when you use it. You call `create`, pass a function, get back a hook. State updates, components re-render. No providers, no boilerplate, no ceremony.
+
+I'd used it for years before I actually looked at the source. When I finally did, I found that the core is about 100 lines. That bothered me in a good way, so I tried to rebuild it from scratch to understand exactly what those 100 lines are doing.
+
+## What Zustand actually is
+
+Before writing code, I had to be precise about what Zustand does:
+
+1. Holds state in a **store** that lives outside of React
+2. Lets components **subscribe** to that store
+3. Re-renders only the components that subscribed when state changes
+4. Lets you select a **slice** of state so components don't re-render for changes they don't care about
+
+That's it. No context, no reducers required, no actions by convention.
+
+## The store: just a closure
+
+The store has nothing to do with React. It's a plain module-level object:
+
+```js
+function createStore(initializer) {
+  let state;
+  const listeners = new Set();
+
+  const getState = () => state;
+
+  const setState = (partial) => {
+    const nextState =
+      typeof partial === 'function' ? partial(state) : partial;
+
+    if (!Object.is(nextState, state)) {
+      state = Object.assign({}, state, nextState);
+      listeners.forEach((listener) => listener(state));
+    }
+  };
+
+  const subscribe = (listener) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+
+  state = initializer(setState, getState);
+
+  return { getState, setState, subscribe };
+}
+```
+
+This is essentially the observer pattern. The store holds state in a closure variable. When `setState` is called, it merges the update (or calls the updater function), compares the result with `Object.is` to avoid redundant notifications, and then calls every subscribed listener.
+
+Subscribers are plain functions stored in a `Set`. Removing a subscriber returns an unsubscribe function — a pattern that's consistent with how `useEffect` cleanup works.
+
+There's no React anywhere in this. It's a plain JS pub/sub system.
+
+## Connecting it to React
+
+The React integration is a hook that subscribes to the store and triggers a re-render when relevant state changes:
+
+```js
+function useStore(store, selector = (s) => s) {
+  const [slice, setSlice] = useState(() => selector(store.getState()));
+
+  useEffect(() => {
+    const unsubscribe = store.subscribe((newState) => {
+      const newSlice = selector(newState);
+      setSlice((prev) => (Object.is(prev, newSlice) ? prev : newSlice));
+    });
+
+    return unsubscribe;
+  }, [store, selector]);
+
+  return slice;
+}
+```
+
+The `selector` function is how you take a slice of state. The component only re-renders if the selected slice actually changed — the `Object.is` check in the subscriber prevents spurious re-renders when other parts of the store update.
+
+This is the crucial insight: **the store notifies all subscribers on every update, but each subscriber only triggers a re-render if its selected slice changed**. The selectivity is per-component, not per-store.
+
+## The problem: selector identity
+
+I ran into an issue immediately. If you define the selector inline in the component:
+
+```js
+const name = useStore(store, (state) => state.user.name);
+```
+
+The selector is a new function on every render. My `useEffect` had `selector` in its dependency array, so it would resubscribe on every render — which would trigger a re-render, which would create a new selector, which would resubscribe... an infinite loop.
+
+The real Zustand avoids this with `useSyncExternalStore`, a React 18 hook designed exactly for this pattern. But to understand why it exists, I tried to solve the problem myself first.
+
+My fix was to use `useRef` to hold the latest selector without making it a dependency:
+
+```js
+function useStore(store, selector = (s) => s) {
+  const selectorRef = useRef(selector);
+  selectorRef.current = selector;
+
+  const [slice, setSlice] = useState(() => selectorRef.current(store.getState()));
+
+  useEffect(() => {
+    const unsubscribe = store.subscribe((newState) => {
+      const newSlice = selectorRef.current(newState);
+      setSlice((prev) => (Object.is(prev, newSlice) ? prev : newSlice));
+    });
+
+    return unsubscribe;
+  }, [store]); // selector no longer in the dependency array
+
+  return slice;
+}
+```
+
+This works in most cases, but it has a subtle flaw: if the selector changes between when the subscription is set up and when the next state update fires, the subscription uses the latest ref value, but the initial `useState` snapshot might be stale. This is a tearing problem — the rendered value and what the subscriber would compute are inconsistent.
+
+## `useSyncExternalStore` fixes this properly
+
+React 18 introduced `useSyncExternalStore` specifically to solve external store integration. It takes a `subscribe` function and a `getSnapshot` function and handles all the tearing edge cases:
+
+```js
+import { useSyncExternalStore } from 'react';
+
+function useStore(store, selector = (s) => s) {
+  return useSyncExternalStore(
+    store.subscribe,
+    () => selector(store.getState()),
+  );
+}
+```
+
+This is much closer to what Zustand actually does. React takes ownership of the snapshot — it guarantees consistency between what's rendered and what's subscribed, even in concurrent rendering scenarios where a component might be suspended and resumed.
+
+The `getSnapshot` function will still be called with a new function reference on every render if you write the selector inline, but `useSyncExternalStore` memoizes the result properly — it only triggers a re-render if the snapshot value changes by reference.
+
+## What this taught me about state management
+
+**Zustand is not magic. It's pub/sub plus a selector.** The magic feeling comes from how well it fits React's model, not from anything technically complex.
+
+**The hard problem in state management is not holding state — it's deciding what to re-render.** Redux, Recoil, Jotai, Zustand all have different answers. Zustand's answer is: re-render components that subscribed to a slice of state that changed. Simple, but it requires you to write good selectors.
+
+**`useSyncExternalStore` deserves more attention.** It's not just for library authors. Any time you're syncing React state with something external — a WebSocket, a browser API, a module-level variable — this hook is the right primitive. I now reach for it directly in application code when the situation calls for it.
+
+**Reading library source is underrated as a learning tool.** I've used Zustand in production for years. I understood it at a usage level. Reading the source and then reimplementing it gave me a completely different kind of understanding — the kind where I can predict how it will behave in edge cases, because I know how it works, not just what it does.
+
+The reimplementation is rough and missing a lot (middleware, devtools integration, `immer` support). But the core — the `createStore` closure and the `useSyncExternalStore` hook — is the whole idea. Everything else is layered on top.

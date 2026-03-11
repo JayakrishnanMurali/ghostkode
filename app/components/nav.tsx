@@ -29,13 +29,19 @@ export function Navbar() {
         >
           <div className="flex flex-row space-x-0 pr-10">
             {Object.entries(navItems).map(([path, { name }]) => {
-              const isActive = pathName === path.toLowerCase();
+              const isActive =
+                path === "/"
+                  ? pathName === "/"
+                  : pathName.startsWith(path.toLowerCase());
               return (
                 <Link
                   key={path}
                   href={path}
-                  className={`"transition-all hover:text-neutral-200 flex align-middle relative py-1 px-2
-                  ${isActive ? " underline" : ""}`}
+                  className={`transition-all flex align-middle relative py-1 px-2 ${
+                    isActive
+                      ? "text-neutral-100 font-medium"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
                 >
                   {name}
                 </Link>

@@ -1,0 +1,142 @@
+---
+title: "V8 hidden classes, inline caches, and writing engine-friendly JS"
+publishedAt: "2025-02-20"
+summary: "How V8 optimizes your JavaScript through hidden classes and inline caches — and how unintentional patterns in everyday code silently kill those optimizations."
+---
+
+JavaScript is a dynamic language. Variables have no fixed type, object shapes can change at any time, and nothing is known at parse time. And yet, modern JavaScript engines routinely execute code at speeds approaching compiled languages. This isn't magic — it's V8's hidden class system and inline caches working together.
+
+Understanding how these work changes the way you write JavaScript.
+
+## The naive approach: dictionary lookup
+
+If V8 stored object properties in a plain hash map, every property access would require a hash lookup. That's expensive, especially in hot loops or component render paths. It also throws away any pattern information that could be exploited.
+
+V8 doesn't do this.
+
+## Hidden classes (Shapes)
+
+When you create an object, V8 doesn't store it as a dictionary. Instead, it assigns the object a **hidden class** — a descriptor that encodes the object's property layout: which keys exist, and at what memory offset each value lives.
+
+```js
+const point = { x: 1, y: 2 };
+```
+
+Under the hood:
+1. V8 creates an initial hidden class `C0` (empty object)
+2. Adding `x` transitions to hidden class `C1`, which says: "this object has `x` at offset 0"
+3. Adding `y` transitions to `C2`: "has `x` at offset 0, `y` at offset 8"
+
+The key insight: **if two objects are created with the same properties in the same order, they share the same hidden class**. V8 can then treat them as having a fixed, known shape and access their properties by offset — no hash lookup needed.
+
+## What breaks hidden class sharing
+
+This optimization is extremely sensitive to property assignment order:
+
+```js
+// These two objects get DIFFERENT hidden classes
+const a = { x: 1, y: 2 };
+const b = { y: 2, x: 1 };
+```
+
+Both have `x` and `y`, but the order differs, so V8 creates separate hidden class chains. They can't benefit from the same optimizations.
+
+Dynamic property addition is even worse:
+
+```js
+function makePoint(x, y) {
+  const p = {};
+  p.x = x;
+  if (someCondition) {
+    p.z = 0; // conditional branch creates a shape fork
+  }
+  p.y = y;
+  return p;
+}
+```
+
+The conditional means some objects take the path `C0 → C1(x) → C2(x,z) → C3(x,z,y)` and others take `C0 → C1(x) → C2(x,y)`. Two shapes, two code paths, no sharing.
+
+The fix is simple — initialize all properties in the constructor:
+
+```js
+function makePoint(x, y) {
+  return { x, y, z: 0 }; // always the same shape
+}
+```
+
+## Inline caches (ICs)
+
+Hidden classes alone don't explain the full speedup. The real payoff comes from **inline caches**.
+
+An inline cache is a small piece of metadata attached to a call site — any place in your code that accesses a property or calls a function. The first time V8 executes that call site, it records the hidden class it saw and caches the result (e.g., "property `x` is at offset 0"). On subsequent executions, V8 checks if the incoming object's hidden class matches the cached one. If it does, it skips the lookup entirely and reads the value directly by offset.
+
+ICs have four states, and the state matters a lot for performance:
+
+| State | What happened | Performance |
+|---|---|---|
+| **Uninitialized** | Never executed | — |
+| **Monomorphic** | Always seen one shape | Fast |
+| **Polymorphic** | Seen 2–4 shapes | Acceptable |
+| **Megamorphic** | Seen 5+ shapes | Slow (no caching) |
+
+Once a call site goes megamorphic, V8 stops trying to cache it. The overhead of checking against many shapes exceeds any benefit.
+
+## Spotting this in real frontend code
+
+This shows up constantly in React. Consider a component that receives props of varying shapes:
+
+```js
+// Caller A
+<Component value={42} label="foo" />
+
+// Caller B
+<Component label="foo" value={42} extra={true} />
+
+// Caller C
+<Component value={42} />
+```
+
+If these call sites are hot, the props object at each usage sees different shapes. The property access `props.value` inside the component goes megamorphic. In isolation this is tiny, but in a component that renders thousands of times — a virtualized list row, a chart tick, a table cell — it adds up.
+
+The pattern extends to reducer functions:
+
+```js
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_VALUE': return { ...state, value: action.payload };
+    case 'RESET':     return initialState; // completely different shape
+  }
+}
+```
+
+The `action` object dispatched for `SET_VALUE` has `{ type, payload }`. The one for `RESET` might have just `{ type }`. The `action.payload` access site sees two different shapes — polymorphic at best.
+
+## Using DevTools to confirm
+
+Chrome DevTools doesn't expose IC states directly in the UI, but you can use `%HaveSameMap(a, b)` with the `--allow-natives-syntax` flag in Node to verify whether two objects share a hidden class:
+
+```bash
+node --allow-natives-syntax check-shapes.js
+```
+
+```js
+const a = { x: 1, y: 2 };
+const b = { x: 3, y: 4 };
+const c = { y: 4, x: 3 };
+
+console.log(%HaveSameMap(a, b)); // true
+console.log(%HaveSameMap(a, c)); // false
+```
+
+For production profiling, the "JavaScript Profiler" panel in DevTools shows time spent in functions. If a function you expect to be fast is consistently showing up with high self-time, IC degradation is worth investigating.
+
+## Practical rules
+
+1. Always initialize all object properties in the constructor or object literal — same order every time.
+2. Avoid adding or deleting properties after object creation.
+3. Keep objects that flow through hot code paths to a consistent shape.
+4. `delete obj.prop` is especially harmful — it transitions the object to a dictionary mode that opts out of hidden class optimizations entirely.
+5. In TypeScript, if your types are consistent, your shapes probably are too. The compiler enforces a discipline that V8 benefits from.
+
+The engine is working hard to make your code fast. A little consistency lets it succeed.

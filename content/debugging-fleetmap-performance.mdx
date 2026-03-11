@@ -1,0 +1,101 @@
+---
+title: "Debugging a bug that only reproduced in production"
+publishedAt: "2025-11-03"
+summary: "A map component worked perfectly in local dev but failed silently in production. Here's the full trail — from symptom to root cause to fix."
+---
+
+The bug report came in on a Tuesday afternoon: the FleetMap wasn't loading in production. No error in the UI, just a blank panel where the map should be. Locally, everything worked fine. Staging was fine. Only deployed production environments were affected.
+
+This is the kind of bug I find genuinely interesting and genuinely terrible at the same time.
+
+## What we knew
+
+The FleetMap is a real-time map component that renders device locations on a geographic canvas. It initializes a mapping library, fetches device telemetry, and overlays markers with live status data.
+
+Initial symptoms:
+- Map container rendered, but the canvas inside was never painted
+- No JavaScript errors in the console
+- Network requests for telemetry data were completing successfully
+- The issue was environment-specific — production CDN, not local dev server
+
+My first instinct was a timing issue. Map libraries that render to a canvas element are notoriously sensitive to the DOM being ready before initialization is called.
+
+## Chasing the wrong lead
+
+I spent the first hour looking at the component's `useEffect` hook — specifically whether the ref to the map container was being passed correctly and whether the initialization was racing with the render:
+
+```js
+useEffect(() => {
+  if (!mapContainerRef.current) return;
+  const mapInstance = initializeMap(mapContainerRef.current);
+  // ...
+}, []);
+```
+
+This looked fine. The ref check was there, the effect dependency array was correct. I added logging to confirm the ref was populated when the effect ran — it was.
+
+Next I looked at the map library itself. It read some configuration from a global object that was set up in a separate initialization module. I wondered if tree shaking in the production build was stripping something it shouldn't.
+
+It wasn't.
+
+## The actual problem
+
+After adding more granular logging — wrapped in a conditional so it only fired in production — I noticed that the map library's internal resize observer was firing with dimensions of `0 x 0`. The container existed in the DOM, but it had no size.
+
+This was the clue. I traced the container's size back through the CSS, and found the issue:
+
+The map panel was inside a layout that used CSS Grid. In development, the layout module was loaded synchronously — the grid column widths were computed before the map mounted. In production, the layout CSS was split into a separate chunk and loaded asynchronously via dynamic import. There was a window — maybe 50–100ms — where the map container was in the DOM but its parent grid column had not yet received its computed width. The container's width resolved to `0`.
+
+The map library checked dimensions on initialization. Width of zero triggered a silent early-return inside the library's setup code. The map never drew.
+
+## Why this only happened in production
+
+In local dev, Vite serves all modules immediately from memory. There's no real async chunk loading — everything is essentially synchronous from the perspective of render timing. The CSS that defined the grid layout was always applied before any component mounted.
+
+In production, the build was code-split aggressively. The layout styles were in a separate CSS chunk that was fetched from the CDN. Even with preload hints, there was a gap between the HTML being parsed and the layout CSS being applied.
+
+## The fix
+
+The cleanest fix was to make the map initialization resilient to zero-dimension containers — initialize lazily using a `ResizeObserver` instead of eagerly on mount:
+
+```js
+useEffect(() => {
+  if (!mapContainerRef.current) return;
+
+  let mapInstance: MapInstance | null = null;
+
+  const observer = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (!entry) return;
+
+    const { width, height } = entry.contentRect;
+    if (width === 0 || height === 0) return;
+
+    if (!mapInstance) {
+      mapInstance = initializeMap(mapContainerRef.current!);
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(mapContainerRef.current);
+
+  return () => {
+    observer.disconnect();
+    mapInstance?.destroy();
+  };
+}, []);
+```
+
+Now the map only initializes when the container actually has dimensions. It doesn't matter whether the parent CSS loaded before or after mount — the `ResizeObserver` fires when dimensions become non-zero, and initialization happens at exactly the right moment.
+
+We also added a CSS fallback with an explicit `min-height` on the container as a belt-and-suspenders measure, so the map panel is always at least somewhat sized regardless of whether parent styles have applied.
+
+## What I took away from this
+
+**Environment parity is a myth.** Local dev and production are never the same. Network latency, chunk splitting, CDN caching, and service worker behavior all create conditions that simply don't exist locally. Any component that depends on timing — maps, charts, canvas elements, anything that reads DOM dimensions on mount — should be resilient to those dimensions being zero.
+
+**Silent failures are the worst failures.** The map library's decision to silently no-op on zero dimensions cost us hours. A thrown error or even a console warning with the container's dimensions would have surfaced the problem in seconds. When I write initialization code now, I make sure failure is loud.
+
+**Add more production logging, earlier.** We had extensive logging in development but almost none that survived the production build. A single log line — "map initializing, container dimensions: 0x0" — would have ended this investigation in five minutes. Since then I've added a lightweight telemetry wrapper that captures initialization events in production, filtered to avoid noise.
+
+The bug was not glamorous. There was no algorithmic insight, no clever data structure. Just a timing window in a CSS loading sequence. But the debugging process — forming hypotheses, eliminating them systematically, following the clue of the zero-dimension container — is the same process that works for every bug, regardless of how deep the rabbit hole goes.
