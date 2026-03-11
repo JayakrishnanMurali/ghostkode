@@ -6,7 +6,7 @@ export default function Page() {
     .sort(
       (a, b) =>
         new Date(b.metadata.publishedAt).getTime() -
-        new Date(a.metadata.publishedAt).getTime()
+        new Date(a.metadata.publishedAt).getTime(),
     )
     .slice(0, 3);
 
@@ -19,12 +19,16 @@ export default function Page() {
       <div className="prose prose-neutral dark:prose-invert">
         <p>
           Frontend engineer at{" "}
-          <a target="_blank" rel="noopener noreferrer" href="https://armada.ai/">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://armada.ai/"
+          >
             Armada.ai
           </a>
-          , building edge computing infrastructure products. I focus on
-          scalable UIs, design systems, and developer tooling — primarily with
-          React, TypeScript, and TanStack.
+          , building edge computing infrastructure products. I focus on scalable
+          UIs, design systems, and developer tooling — primarily with React,
+          TypeScript, and TanStack.
         </p>
         <p>
           Outside of work I build side <Link href="/project">projects</Link>,
@@ -33,7 +37,9 @@ export default function Page() {
       </div>
 
       <div className="mt-8">
-        <p className="text-xs uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">recent writing</p>
+        <p className="text-xs uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+          recent writing
+        </p>
         {recentPosts.map((post) => (
           <a
             key={post.slug}
@@ -51,9 +57,30 @@ export default function Page() {
       </div>
 
       <div className="mt-8 flex gap-4 text-sm text-neutral-400 dark:text-neutral-500">
-        <a href="https://twitter.com/ghostkoder" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">twitter</a>
-        <a href="https://www.linkedin.com/in/jayakrishnanmurali/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">linkedin</a>
-        <a href="https://github.com/JayakrishnanMurali" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">github</a>
+        <a
+          href="https://twitter.com/jkay_dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+        >
+          twitter
+        </a>
+        <a
+          href="https://www.linkedin.com/in/jayakrishnanmurali/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+        >
+          linkedin
+        </a>
+        <a
+          href="https://github.com/JayakrishnanMurali"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+        >
+          github
+        </a>
       </div>
     </section>
   );

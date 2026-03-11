@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { projects } from "./_project.constants";
 
 export const metadata: Metadata = {
@@ -9,32 +10,35 @@ export const metadata: Metadata = {
 export default function ProjectPage() {
   return (
     <section>
-      <h1 className="font-medium text-2xl mb-8 tracking-tighter">things I've built</h1>
+      <h1 className="font-medium text-2xl mb-8 tracking-tighter">
+        things I've built
+      </h1>
       <div className="flex flex-col divide-y divide-neutral-100 dark:divide-neutral-800">
         {projects.map((project) => (
-          <div key={project.name} className="py-5 first:pt-0 last:pb-0">
-            <div className="flex items-baseline justify-between mb-1">
-              <a
-                href={project.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-neutral-900 dark:text-neutral-100"
-              >
-                {project.name}
-              </a>
-              <a
-                href={project.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-              >
-                github ↗
-              </a>
+          <Link
+            key={project.slug}
+            href={`/project/${project.slug}`}
+            className="group py-5 first:pt-0 last:pb-0 flex items-baseline justify-between gap-6"
+          >
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-neutral-900 dark:text-neutral-100 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors duration-200">
+                  {project.name}
+                </span>
+                {project.wip && (
+                  <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                    wip
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                {project.tagline}
+              </p>
             </div>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              {project.description}
-            </p>
-          </div>
+            <span className="shrink-0 text-xs text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-500 transition-colors duration-200">
+              ↗
+            </span>
+          </Link>
         ))}
       </div>
     </section>

@@ -5,7 +5,7 @@ export default function robots() {
         userAgent: "*",
       },
     ],
-    sitemap: "https://ghostkode.com/sitemap.xml",
-    host: "https://ghostkode.com",
+    sitemap: "https://jkayy.in/sitemap.xml",
+    host: "https://jkayy.in",
   };
 }

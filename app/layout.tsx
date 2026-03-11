@@ -8,7 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PreloadResources } from "./preload";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ghostkode.com"),
+  metadataBase: new URL("https://jkayy.in"),
   title: {
     default: "Jayakrishnan M",
     template: "%s | Jayakrishnan M",
@@ -17,10 +17,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Jayakrishnan M",
     description: "Developer, writer, and creator.",
-    url: "https://ghostkode.com",
+    url: "https://jkayy.in",
     images: [
       {
-        url: "https://ghostkode.com/og-static.png",
+        url: "https://jkayy.in/og-static.png",
         width: 1920,
         height: 1080,
         alt: "Jayakrishnan M",
@@ -60,7 +60,7 @@ export default function RootLayout({
       className={cx(
         "text-black bg-white dark:text-white dark:bg-[#111010]",
         GeistSans.variable,
-        GeistMono.variable
+        GeistMono.variable,
       )}
     >
       <body className="antialiased max-w-2xl mb-40 flex flex-col md:flex-row mx-4 mt-8 lg:mx-auto">

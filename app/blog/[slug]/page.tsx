@@ -19,8 +19,8 @@ export async function generateMetadata({
     image,
   } = post.metadata;
   let ogImage = image
-    ? `https://ghostkode.com/${image}`
-    : `https://ghostkode.com/og?title=${title}`;
+    ? `https://jkayy.in/${image}`
+    : `https://jkayy.in/og?title=${title}`;
 
   return {
     title,
@@ -30,7 +30,7 @@ export async function generateMetadata({
       description,
       type: "article",
       publishedTime,
-      url: `https://ghostkode.com/blog/${post.slug}`,
+      url: `https://jkayy.in/blog/${post.slug}`,
       images: [
         {
           url: ogImage,
@@ -67,9 +67,9 @@ export default function Blog({ params }) {
             dateModified: post.metadata.publishedAt,
             description: post.metadata.summary,
             image: post.metadata.image
-              ? `https://ghostkode.com/${post.metadata.image}`
-              : `https://ghostkode.com/og?title=${post.metadata.title}`,
-            url: `https://ghostkode.com/blog/${post.slug}`,
+              ? `https://jkayy.in/${post.metadata.image}`
+              : `https://jkayy.in/og?title=${post.metadata.title}`,
+            url: `https://jkayy.in/blog/${post.slug}`,
             author: {
               "@type": "Person",
               name: "Jayakrishnan M",
@@ -95,7 +95,7 @@ export default function Blog({ params }) {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <a
-              href="https://twitter.com/ghostkoder"
+              href="https://twitter.com/jkay_dev"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-2"
@@ -110,7 +110,7 @@ export default function Blog({ params }) {
                 <use href="/sprite.svg#twitter" />
               </svg>
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                @ghostkoder
+                @jkay_dev
               </span>
             </a>
           </div>
