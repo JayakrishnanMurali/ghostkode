@@ -22,14 +22,21 @@ export default function BlogPage() {
           <Link
             key={post.slug}
             href={`/blog/${post.slug}`}
-            className="group flex items-baseline justify-between py-4 gap-6"
+            className="group flex flex-col py-4 gap-1"
           >
-            <span className="text-neutral-900 dark:text-neutral-100 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors duration-200 leading-snug">
-              {post.metadata.title}
-            </span>
-            <span className="shrink-0 text-sm text-neutral-400 dark:text-neutral-500 tabular-nums">
-              {formatDate(post.metadata.publishedAt).formattedDate}
-            </span>
+            <div className="flex items-baseline justify-between gap-6">
+              <span className="text-neutral-900 dark:text-neutral-100 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors duration-200 leading-snug">
+                {post.metadata.title}
+              </span>
+              <span className="shrink-0 text-sm text-neutral-400 dark:text-neutral-500 tabular-nums">
+                {formatDate(post.metadata.publishedAt).formattedDate}
+              </span>
+            </div>
+            {post.metadata.summary && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-snug">
+                {post.metadata.summary}
+              </p>
+            )}
           </Link>
         ))}
       </div>

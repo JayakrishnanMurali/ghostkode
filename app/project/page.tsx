@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProductHuntBadge } from "app/components/product-hunt-badge";
 import { projects } from "./_project.constants";
 
 export const metadata: Metadata = {
@@ -29,6 +30,9 @@ export default function ProjectPage() {
                   <span className="text-xs text-neutral-400 dark:text-neutral-500">
                     wip
                   </span>
+                )}
+                {project.productHuntUrl && (
+                  <ProductHuntBadge url={project.productHuntUrl} />
                 )}
               </div>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">

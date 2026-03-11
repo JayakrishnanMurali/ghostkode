@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ProductHuntBadge } from "app/components/product-hunt-badge";
 import { projects } from "../_project.constants";
 
 export async function generateStaticParams() {
@@ -38,6 +39,9 @@ export default function ProjectDetailPage({
             <span className="text-xs text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-800 rounded-full px-2 py-0.5">
               wip
             </span>
+          )}
+          {project.productHuntUrl && (
+            <ProductHuntBadge url={project.productHuntUrl} />
           )}
         </div>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm">

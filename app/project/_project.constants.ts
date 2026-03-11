@@ -8,6 +8,7 @@ export type Project = {
   github: string;
   link?: string;
   wip?: boolean;
+  productHuntUrl?: string;
 };
 
 export const projects: Project[] = [
@@ -122,5 +123,6 @@ export const projects: Project[] = [
     ],
     github: "https://github.com/JayakrishnanMurali/codify",
     link: "https://codify.jkayy.in/",
+    productHuntUrl: "https://www.producthunt.com/posts/codify-2",
   },
 ];
